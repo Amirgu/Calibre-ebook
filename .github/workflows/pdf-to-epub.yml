@@ -78,7 +78,6 @@ jobs:
             --subset-embedded-fonts \
             --unsmarten-punctuation \
             --preserve-cover-aspect-ratio \
-            --jpeg-compression 85 \
             --pdf-serif-family "Georgia" \
             --pdf-sans-family "Helvetica Neue" \
             --pdf-mono-family "Courier New" \
