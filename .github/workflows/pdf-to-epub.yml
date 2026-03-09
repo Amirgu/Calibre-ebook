@@ -23,9 +23,7 @@ jobs:
       - name: Install Calibre
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y xvfb libgl1 libegl1 libopengl0 libxcb-cursor0
-          # Install latest Calibre from official installer (includes full ebook-convert)
-          wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt/calibre
+          sudo apt-get install -y calibre xvfb
 
       - name: Find PDF file
         id: find_pdf
@@ -36,25 +34,23 @@ jobs:
             exit 1
           fi
           echo "pdf_file=$PDF_FILE" >> $GITHUB_OUTPUT
-          # Derive a clean EPUB output name
           BASENAME=$(basename "$PDF_FILE" .pdf)
           EPUB_NAME="${BASENAME}.epub"
           echo "epub_file=$EPUB_NAME" >> $GITHUB_OUTPUT
           echo "Found PDF: $PDF_FILE"
           echo "Output EPUB: $EPUB_NAME"
+          ebook-convert --version
 
       - name: Convert PDF → EPUB3 (Apple Books optimised)
         env:
           PDF_FILE: ${{ steps.find_pdf.outputs.pdf_file }}
           EPUB_FILE: ${{ steps.find_pdf.outputs.epub_file }}
         run: |
-          # Run inside virtual display so Calibre GUI libs don't complain
           export DISPLAY=:99
           Xvfb :99 -screen 0 1024x768x24 &
+          sleep 2
 
-          /opt/calibre/ebook-convert "$PDF_FILE" "$EPUB_FILE" \
-            \
-            `# ── Metadata ──────────────────────────────────────────────` \
+          ebook-convert "$PDF_FILE" "$EPUB_FILE" \
             --authors "C.G. Jung" \
             --title "Psychology and Alchemy" \
             --series "Collected Works of C.G. Jung" \
@@ -62,23 +58,15 @@ jobs:
             --language "en" \
             --pubdate "1953-01-01" \
             --publisher "Princeton University Press" \
-            \
-            `# ── EPUB3 output (required for Apple Books) ──────────────` \
             --epub-version "3" \
             --pretty-print \
-            \
-            `# ── Table of Contents ────────────────────────────────────` \
             --use-auto-toc \
             --toc-title "Table of Contents" \
             --toc-threshold 6 \
             --max-toc-links 200 \
-            \
-            `# ── Chapter / structure detection ────────────────────────` \
             --chapter "//*[name()='h1' or name()='h2' or name()='h3']" \
             --chapter-mark "pagebreak" \
             --page-breaks-before "//*[name()='h1' or name()='h2']" \
-            \
-            `# ── Layout & typography (Apple Books friendly) ───────────` \
             --margin-top 72 \
             --margin-bottom 72 \
             --margin-left 72 \
@@ -86,31 +74,22 @@ jobs:
             --base-font-size 12 \
             --font-size-mapping "10,12,14,16,18,20,22,24" \
             --minimum-line-height 140 \
-            \
-            `# ── Font handling ────────────────────────────────────────` \
             --embed-all-fonts \
             --subset-embedded-fonts \
             --unsmarten-punctuation \
-            \
-            `# ── Images ───────────────────────────────────────────────` \
             --preserve-cover-aspect-ratio \
             --jpeg-compression 85 \
-            \
-            `# ── PDF-specific input tuning ────────────────────────────` \
             --pdf-serif-family "Georgia" \
             --pdf-sans-family "Helvetica Neue" \
             --pdf-mono-family "Courier New" \
             --pdf-default-font-size 12 \
             --pdf-mono-font-size 10 \
-            \
-            `# ── Heuristic processing ─────────────────────────────────` \
             --enable-heuristics \
             --dehyphenate \
             --fix-indents \
             --delete-blank-paragraphs \
             --format-scene-breaks \
             --italicize-common-cases \
-            \
             --verbose
 
           echo "Conversion complete. EPUB size: $(du -sh "$EPUB_FILE" | cut -f1)"
@@ -119,7 +98,6 @@ jobs:
         env:
           EPUB_FILE: ${{ steps.find_pdf.outputs.epub_file }}
         run: |
-          # Quick sanity check – verify it is a valid ZIP/EPUB container
           python3 - <<'PYEOF'
           import sys, os, zipfile
           epub = os.environ["EPUB_FILE"]
@@ -127,10 +105,8 @@ jobs:
               with zipfile.ZipFile(epub) as z:
                   names = z.namelist()
                   assert "mimetype" in names, "Missing mimetype"
-                  assert any("content.opf" in n or ".opf" in n for n in names), "Missing OPF"
-                  ncx_or_nav = [n for n in names if n.endswith(".ncx") or "nav" in n]
+                  assert any(".opf" in n for n in names), "Missing OPF"
                   print(f"EPUB valid — {len(names)} files inside.")
-                  print(f"Navigation files: {ncx_or_nav}")
           except Exception as e:
               print(f"Validation failed: {e}")
               sys.exit(1)
@@ -155,12 +131,7 @@ jobs:
           else
             git commit -m "chore: add Apple-Books-optimised EPUB converted from PDF
 
-          Converted using Calibre ebook-convert with EPUB3 output.
-          Optimised for Apple Books / Apple Livres:
-          - EPUB 3 format with navigation document
-          - Embedded & subsetted fonts
-          - Auto-generated Table of Contents
-          - Heuristic paragraph / hyphenation fixes
-          - Jung – Psychology and Alchemy (CW Vol. 12)"
+          Jung – Psychology and Alchemy (CW Vol. 12)
+          EPUB3, embedded fonts, auto-TOC, heuristic fixes"
             git push origin HEAD
           fi
