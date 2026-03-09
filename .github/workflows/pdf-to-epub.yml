@@ -79,11 +79,6 @@ jobs:
             --unsmarten-punctuation \
             --preserve-cover-aspect-ratio \
             --enable-heuristics \
-            --dehyphenate \
-            --fix-indents \
-            --delete-blank-paragraphs \
-            --format-scene-breaks \
-            --italicize-common-cases \
             --verbose
 
           echo "Conversion complete. EPUB size: $(du -sh "$EPUB_FILE" | cut -f1)"
