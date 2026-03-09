@@ -58,7 +58,7 @@ jobs:
             --language "en" \
             --pubdate "1953-01-01" \
             --publisher "Princeton University Press" \
-            --epub-version "3" \
+            --epub-version "2" \
             --pretty-print \
             --use-auto-toc \
             --toc-title "Table of Contents" \
