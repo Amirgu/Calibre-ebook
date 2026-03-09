@@ -23,7 +23,7 @@ jobs:
       - name: Install Calibre
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y xvfb libgl1 libegl1 libopengl0
+          sudo apt-get install -y xvfb libgl1 libegl1 libopengl0 libxcb-cursor0
           # Install latest Calibre from official installer (includes full ebook-convert)
           wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt/calibre
 
